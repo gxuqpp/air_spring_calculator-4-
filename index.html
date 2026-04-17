@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>空气弹簧设计与计算工具</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#18181a;--bg2:#222226;--bg3:#2c2c32;--bg4:#38383f;
+  --text:#f2f0ea;--text2:#b8b5ac;--text3:#7a7870;
+  --border:rgba(255,255,255,0.10);--border2:rgba(255,255,255,0.18);
+  --accent:#5ba3e8;--accent-bg:#0d2a44;
+  --warn-bg:#3a2000;--warn-text:#f5c060;
+  --ok-bg:#0e2a10;--ok-text:#7fcc60;
+  --radius:10px;--radius-lg:14px;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;padding:2rem 1.2rem 3rem;line-height:1.65;font-size:17px;
+}
+.page{max-width:960px;margin:0 auto}
+.header{
+  background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border2);
+  padding:1.6rem 2rem;margin-bottom:1.2rem;display:flex;align-items:flex-start;gap:1.2rem;
+}
+.header-icon{
+  width:54px;height:54px;border-radius:var(--radius);background:var(--accent-bg);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.header-icon svg{width:30px;height:30px}
+.header h1{font-size:24px;font-weight:600;color:var(--text);margin-bottom:5px}
+.header p{font-size:15px;color:var(--text2)}
+.card{
+  background:var(--bg2);border-radius:var(--radius-lg);border:1px solid var(--border);
+  padding:1.8rem 2rem;margin-bottom:1.2rem;
+}
+.section-title{
+  font-size:14px;font-weight:600;color:var(--accent);text-transform:uppercase;
+  letter-spacing:.1em;margin-bottom:1.2rem;padding-bottom:7px;border-bottom:1px solid var(--border);
+}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:16px;color:var(--text2);display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
+.field label .unit{font-size:13px;color:var(--text3)}
+.field input[type=number]{
+  width:100%;padding:11px 14px;font-size:19px;
+  border:1px solid var(--border2);border-radius:var(--radius);
+  background:var(--bg3);color:var(--text);transition:border-color .15s;
+}
+.field input[type=number]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(91,163,232,0.15)}
+.field .hint{font-size:13px;color:var(--text3)}
+.divider{height:1px;background:var(--border);margin:1.6rem 0}
+.k-row{display:flex;gap:0;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)}
+.k-option{flex:1;min-width:140px}
+.k-option input[type=radio]{display:none}
+.k-option label{
+  display:block;padding:14px 10px;font-size:15px;color:var(--text2);
+  background:var(--bg3);cursor:pointer;transition:background .12s,color .12s;
+  text-align:center;border-right:1px solid var(--border2);
+}
+.k-option:last-child label{border-right:none}
+.k-option input:checked+label{background:var(--accent-bg);color:var(--accent);font-weight:600}
+.k-val{font-size:19px;font-weight:600;display:block;margin-bottom:4px}
+.k-desc{font-size:13px;display:block;line-height:1.4}
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1rem}
+@media(max-width:500px){.results-grid{grid-template-columns:1fr}}
+.metric{background:var(--bg3);border-radius:var(--radius);padding:18px 20px}
+.metric-label{font-size:15px;color:var(--text2);margin-bottom:8px}
+.metric-value{font-size:32px;font-weight:600;color:var(--text);line-height:1.1}
+.metric-unit{font-size:17px;font-weight:400;color:var(--text3);margin-left:4px}
+.metric-note{font-size:14px;color:var(--text3);margin-top:7px}
+.msg{border-radius:var(--radius);padding:13px 18px;font-size:16px;margin-bottom:1rem;display:none}
+.msg.show{display:block}
+.msg.warn{background:var(--warn-bg);color:var(--warn-text)}
+.msg.ok{background:var(--ok-bg);color:var(--ok-text)}
+.formula-card{
+  background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);
+  padding:1.2rem 1.5rem;margin-bottom:1rem;
+}
+.f-title{font-size:16px;font-weight:600;color:var(--accent);margin-bottom:9px}
+.f-eq{
+  font-family:'Courier New',Courier,monospace;font-size:15px;
+  color:var(--text);line-height:2;background:var(--bg4);border-radius:8px;
+  padding:10px 14px;margin-bottom:9px;word-break:break-all;
+}
+.f-note{font-size:15px;color:var(--text2);line-height:1.8}
+.ref-table{width:100%;border-collapse:collapse;font-size:16px;margin-top:8px}
+.ref-table th{
+  background:var(--bg3);color:var(--text2);font-weight:600;
+  padding:13px 14px;text-align:left;border-bottom:1px solid var(--border2);
+}
+.ref-table td{padding:13px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+.ref-table tr:last-child td{border-bottom:none}
+.ref-table tr:hover td{background:var(--bg3)}
+.badge{display:inline-block;padding:3px 10px;border-radius:5px;font-size:13px;font-weight:600}
+.badge-blue{background:var(--accent-bg);color:var(--accent)}
+.badge-green{background:var(--ok-bg);color:var(--ok-text)}
+.badge-warn{background:var(--warn-bg);color:var(--warn-text)}
+.sim-controls{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:1.4rem}
+@media(max-width:540px){.sim-controls{grid-template-columns:1fr}}
+.legend{display:flex;gap:22px;flex-wrap:wrap;margin-bottom:14px;font-size:15px}
+.legend-item{display:flex;align-items:center;gap:8px}
+.legend-swatch{width:30px;height:4px;border-radius:2px;flex-shrink:0}
+#chart-wrap{position:relative;width:100%;height:430px}
+.chart-note{font-size:14px;color:var(--text3);margin-top:12px;line-height:1.8}
+.footer{text-align:center;font-size:14px;color:var(--text3);padding:2rem 0 .5rem}
+user-select: none
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="header">
+  <div class="header-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#5ba3e8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse cx="12" cy="12" rx="9" ry="5"/>
+      <path d="M3 12c0 3 4 6 9 6s9-3 9-6"/>
+      <path d="M12 7v10"/>
+    </svg>
+  </div>
+  <div>
+    <h1>空气弹簧设计与计算工具</h1>
+    <p>《汽车设计》第6版（闵海涛、王建华）第七章 悬架设计 — 公式 7-32 / 7-33 | 离线版</p>
+  </div>
+</div>
+
+<!-- 参数输入 -->
+<div class="card">
+  <div class="section-title">基本参数输入</div>
+  <div class="grid2" style="margin-bottom:18px">
+    <div class="field">
+      <label>气囊绝对压力 p₀ <span class="unit">MPa</span></label>
+      <input type="number" id="p0" value="0.6" step="0.05" min="0.1" max="5">
+      <span class="hint">推荐范围：0.5 ～ 1.0 MPa</span>
+    </div>
+    <div class="field">
+      <label>大气压力 p_a <span class="unit">MPa</span></label>
+      <input type="number" id="pa" value="0.101325" step="0.001" min="0.08" max="0.12">
+      <span class="hint">标准大气压 ≈ 0.101325 MPa</span>
+    </div>
+    <div class="field">
+      <label>静平衡气体容积 V₀ <span class="unit">mm³</span></label>
+      <input type="number" id="V0" value="5000000" step="100000" min="10000">
+      <span class="hint">1 L = 1 000 000 mm³</span>
+    </div>
+    <div class="field">
+      <label>有效直径 D <span class="unit">mm</span></label>
+      <input type="number" id="D" value="200" step="5" min="30" max="800">
+      <span class="hint">有效面积 A = πD²/4 自动计算</span>
+    </div>
+  </div>
+  <div class="field" style="margin-bottom:18px">
+    <label>有效面积变化率 dA/df <span class="unit">mm²/mm</span></label>
+    <input type="number" id="dAdf" value="0" step="10">
+    <span class="hint">膜式弹簧取较大值；囊式弹簧变化小，可近似取 0</span>
+  </div>
+  <div class="divider"></div>
+  <div class="section-title">多变指数 k 选取</div>
+  <div class="k-row">
+    <div class="k-option">
+      <input type="radio" name="k" value="1.0" id="k10">
+      <label for="k10"><span class="k-val">k = 1.0</span><span class="k-desc">载荷缓慢变化<br>近似等温过程</span></label>
+    </div>
+    <div class="k-option">
+      <input type="radio" name="k" value="1.33" id="k133" checked>
+      <label for="k133"><span class="k-val">k = 1.33 ★</span><span class="k-desc">一般行驶状态<br>设计常用值</span></label>
+    </div>
+    <div class="k-option">
+      <input type="radio" name="k" value="1.4" id="k14">
+      <label for="k14"><span class="k-val">k = 1.4</span><span class="k-desc">振动激烈<br>近似绝热过程</span></label>
+    </div>
+  </div>
+</div>
+
+<!-- 计算结果 -->
+<div class="card">
+  <div class="section-title">计算结果（静平衡工作点）</div>
+  <div class="results-grid">
+    <div class="metric">
+      <div class="metric-label">有效面积 A</div>
+      <div class="metric-value" id="r-A">—<span class="metric-unit">mm²</span></div>
+      <div class="metric-note" id="r-A-note"></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">超静平衡压力 (p₀ − p_a)</div>
+      <div class="metric-value" id="r-dp">—<span class="metric-unit">MPa</span></div>
+      <div class="metric-note" id="r-dp-note"></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">静平衡刚度 c₀（式 7-32）</div>
+      <div class="metric-value" id="r-c0">—<span class="metric-unit">N/mm</span></div>
+      <div class="metric-note" id="r-c0-note"></div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">静平衡固有频率 n₀（式 7-33）</div>
+      <div class="metric-value" id="r-n0">—<span class="metric-unit">Hz</span></div>
+      <div class="metric-note" id="r-n0-note"></div>
+    </div>
+  </div>
+  <div class="msg" id="warn-box"></div>
+</div>
+
+<!-- 非线性仿真 -->
+<div class="card">
+  <div class="section-title">非线性弹性特性仿真（F − f 曲线）</div>
+  <div class="sim-controls">
+    <div class="field">
+      <label>仿真行程范围 ±f_max <span class="unit">mm</span></label>
+      <input type="number" id="sl-fmax" min="10" max="1000" step="10" value="150" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>辅助气室倍数 α &nbsp;(V_aux = α·V₀) <span class="unit">—</span></label>
+      <input type="number" id="sl-alpha" min="0" max="20" step="0.5" value="0" inputmode="decimal">
+      <span class="hint">取 0 = 无辅助气室</span>
+    </div>
+    <div class="field">
+      <label>对比线性刚度 c_lin <span class="unit">N/mm</span></label>
+      <input type="number" id="sl-clin" min="0" max="10000" step="5" value="80" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>静载力偏置（% 峰值力）<span class="unit">%</span></label>
+      <input type="number" id="sl-F1pct" min="0" max="100" step="5" value="50" inputmode="decimal">
+    </div>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#5ba3e8"></div><span>空气弹簧（当前 k 值）</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#60cc70"></div><span>空气弹簧（k=1.0 等温对比）</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#e05c5c;border-top:3px dashed #e05c5c;height:2px;border-radius:0"></div><span>等效线性弹簧（钢板弹簧）</span></div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#f5c060"></div><span>加辅助气室后</span></div>
+  </div>
+  <div id="chart-wrap">
+    <canvas id="simChart" role="img" aria-label="空气弹簧非线性弹性特性 F-f 曲线"></canvas>
+  </div>
+  <div class="chart-note">
+    <strong style="color:var(--text2)">仿真原理：</strong>
+    气体多变过程 p·Vᵏ = 常数。弹簧压缩量 f 时，V(f) = V₀ − A·f，气体压力 p(f) = p₀·(V₀/V)ᵏ，
+    弹簧力 F(f) = [p(f) − p_a]·A。压缩端（f &gt; 0）刚度快速增大（硬化），伸张端（f &lt; 0）刚度下降（软化），
+    呈现典型非线性特性——对应教材图 7-45。加辅助气室后曲线整体变平缓，固有频率降低。
+  </div>
+</div>
+
+
+<!-- 完整模型：有效面积与容积均随位移变化 -->
+<div class="card">
+  <div class="section-title">空气弹簧刚度特性曲线（完整模型 — 参考实例19）</div>
+
+  <div style="background:var(--accent-bg);border:1px solid rgba(91,163,232,0.25);border-radius:var(--radius);padding:14px 18px;margin-bottom:1.2rem;font-size:15px;color:#8fc8f0;line-height:1.9">
+    教材实例19（肖启瑞《车辆工程仿真与分析》）的完整模型：有效面积 <em>A</em> 和有效容积 <em>V</em>
+    均随弹簧变形量 <em>x</em> 线性变化，能更真实地反映膜式/囊式弹簧的非线性硬化特性。<br>
+    <strong>A = A₀ + β·x</strong> &nbsp;|&nbsp; <strong>V = V₀ − α·x</strong> &nbsp;|&nbsp;
+    <strong>p = (p₀+p_a)·(V₀/V)^γ − p_a</strong> &nbsp;|&nbsp; <strong>F = p·A</strong><br>
+    压缩（x &gt; 0）：容积减小→压力升高，同时有效面积增大 → 刚度非线性增大（硬化）。
+    气体压力 p₀、大气压 p_a 和多变指数 γ 取自上方参数区。
+  </div>
+
+  <div class="sim-controls" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="field">
+      <label>初始有效容积 V₀ <span class="unit">mm³</span></label>
+      <input type="number" id="sl2-V0" min="1000" max="999999999" step="200000" value="7800000" inputmode="decimal">
+      <span class="hint">1 L = 1 000 000 mm³</span>
+    </div>
+    <div class="field">
+      <label>初始有效面积 A₀ <span class="unit">mm²</span></label>
+      <input type="number" id="sl2-A0" min="100" max="999999" step="500" value="38100" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>容积变化率 α <span class="unit">mm³/mm</span></label>
+      <input type="number" id="sl2-alpha" min="0" max="9999999" step="1000" value="59000" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>面积变化率 β <span class="unit">mm²/mm</span></label>
+      <input type="number" id="sl2-beta" min="0" max="9999" step="0.5" value="18.6" inputmode="decimal">
+    </div>
+    <div class="field">
+      <label>仿真行程 ±x_max <span class="unit">mm</span></label>
+      <input type="number" id="sl2-xmax" min="5" max="500" step="5" value="70" inputmode="decimal">
+    </div>
+  </div>
+
+  <div id="chart2-wrap" style="position:relative;width:100%;height:420px;margin-top:.6rem">
+    <canvas id="simChart2" role="img" aria-label="空气弹簧刚度特性曲线（完整模型）"></canvas>
+  </div>
+  <div id="chart2-info" style="margin-top:10px;font-size:14px;color:var(--text2);line-height:2;font-family:'Courier New',Courier,monospace"></div>
+
+  <div style="margin-top:12px;font-size:14px;color:var(--text3);line-height:1.8">
+    <strong style="color:var(--text2)">参数说明（教材表19-1 商用车空气前悬架参考值）：</strong>
+    V₀ = 7 800 000 mm³；A₀ = 38 100 mm²；α = 59 000 mm³/mm；β = 18.6 mm²/mm；γ = 1.33。
+    蓝色实线为完整模型（A、V 均变化），绿色虚线为简化模型（A 恒定，V = V₀ − A₀·x），金色点为静载工作点（x = 0）。
+  </div>
+</div>
+
+<!-- 公式说明 -->
+<div class="card">
+  <div class="section-title">计算公式说明</div>
+  <div class="formula-card">
+    <div class="f-title">式 7-32 — 静平衡位置空气弹簧刚度</div>
+    <div class="f-eq">c₀ = (k · p₀ / V₀) · A²  +  (p₀ − p_a) · (dA/df)</div>
+    <div class="f-note">
+      第一项：气体压缩产生的刚度；第二项：有效面积随行程变化的附加刚度。<br>
+      当 dA/df = 0 时简化为：c₀ = k · p₀ · A² / V₀
+    </div>
+  </div>
+  <div class="formula-card">
+    <div class="f-title">式 7-33 — 静平衡位置振动固有频率</div>
+    <div class="f-eq">n₀ = (1/2π) · √[ k·p₀·A·g / ((p₀−p_a)·V₀)  +  (g/A)·(dA/df) ]</div>
+    <div class="f-note">
+      g = 9810 mm/s²；A = πD²/4；p₀、p_a 单位 N/mm²（= MPa）；V₀ 单位 mm³。<br>
+      乘用车目标约 1 Hz；商用车约 1.2 ～ 1.5 Hz。频率越低，悬架隔振性越好。
+    </div>
+  </div>
+  <div class="formula-card">
+    <div class="f-title">非线性仿真公式（气体多变过程）</div>
+    <div class="f-eq">p(f) = p₀ · [ V₀ / (V₀ − A·f) ]ᵏ<br>F(f) = [ p(f) − p_a ] · A</div>
+    <div class="f-note">
+      f &gt; 0（压缩）：体积减小 → 压力升高 → 刚度增大（硬化）。<br>
+      f &lt; 0（伸张）：体积增大 → 压力降低 → 刚度减小（软化）。<br>
+      加辅助气室：V₀ 替换为 (1+α)·V₀，曲线变平缓，固有频率降低。
+    </div>
+  </div>
+</div>
+
+<!-- 参考表 -->
+<div class="card">
+  <div class="section-title">空气弹簧类型参考</div>
+  <table class="ref-table">
+    <thead>
+      <tr><th>类型</th><th>典型气压</th><th>刚度特性</th><th>主要优点</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>囊式（单/双/多曲气囊）</td><td>0.5 ～ 1.0 MPa</td><td><span class="badge badge-warn">较高</span></td><td>结构简单、寿命长、成本低</td></tr>
+      <tr><td>自由膜式</td><td>0.5 ～ 1.0 MPa</td><td><span class="badge badge-blue">较低</span></td><td>刚度低，弹性特性理想</td></tr>
+      <tr><td>约束膜式</td><td>0.5 ～ 1.0 MPa</td><td><span class="badge badge-blue">较低</span></td><td>可通过底座形状控制 dA/df</td></tr>
+      <tr><td>复合式</td><td>0.5 ～ 1.0 MPa</td><td><span class="badge badge-green">低</span></td><td>兼顾膜式低刚度，结构居中</td></tr>
+    </tbody>
+  </table>
+  <div style="margin-top:14px;font-size:15px;color:var(--text3);line-height:1.8">
+    注：辅助气室容积一般不超过主气囊容积的 3 倍，超过后降频效果不显著。<br>
+    气囊工作温度：−40 ～ +70 °C；24 h 内压降不超过 0.02 MPa。
+  </div>
+</div>
+
+<div class="footer">《汽车设计》第6版 闵海涛、王建华 — 第七章 悬架设计 第四节 弹性元件的设计与计算</div>
+</div>
+
+<script>
+const g=9810;
+
+function getK(){return parseFloat(document.querySelector('input[name="k"]:checked').value)}
+function getP(){
+  return{
+    p0:parseFloat(document.getElementById('p0').value),
+    pa:parseFloat(document.getElementById('pa').value),
+    V0:parseFloat(document.getElementById('V0').value),
+    D: parseFloat(document.getElementById('D').value),
+    dAdf:parseFloat(document.getElementById('dAdf').value),
+    k:getK()
+  }
+}
+
+function calc(){
+  const{p0,pa,V0,D,dAdf,k}=getP();
+  const wb=document.getElementById('warn-box');
+  wb.className='msg';wb.textContent='';
+  const set=(id,val,unit,note)=>{
+    document.getElementById(id).innerHTML=val+'<span class="metric-unit">'+unit+'</span>';
+    if(note!==undefined)document.getElementById(id+'-note').textContent=note;
+  };
+  if([p0,pa,V0,D,dAdf].some(isNaN)){wb.className='msg warn show';wb.textContent='⚠ 存在无效输入，请检查所有参数';return}
+  if(p0<=pa){wb.className='msg warn show';wb.textContent='⚠ 气囊绝对压力 p₀ 必须大于大气压 p_a';return}
+  if(V0<=0||D<=0){wb.className='msg warn show';wb.textContent='⚠ V₀ 和 D 必须为正数';return}
+  const A=Math.PI*D*D/4;
+  const dp=p0-pa;
+  const c0=(k*p0/V0)*A*A+dp*dAdf;
+  const inner=(k*p0*A*g)/(dp*V0)+(g/A)*dAdf;
+  set('r-A', A.toFixed(1),'mm²','A = πD²/4，D = '+D+' mm');
+  set('r-dp',dp.toFixed(4),'MPa','即 '+(dp*1000).toFixed(1)+' kPa');
+  set('r-c0',c0.toFixed(2),'N/mm','k = '+k+'，V₀ = '+(V0/1e6).toFixed(3)+' L');
+  if(inner<0){
+    set('r-n0','无效','','根号内值为负，请调整参数');
+    wb.className='msg warn show';wb.textContent='⚠ 振动频率根号内为负（'+inner.toFixed(4)+'），请减小 dA/df 或增大 p₀';return;
+  }
+  const n0=(1/(2*Math.PI))*Math.sqrt(inner);
+  set('r-n0',n0.toFixed(3),'Hz','参考目标：乘用车≈1 Hz，商用车≈1.2～1.5 Hz');
+  let hint=n0<0.8?'频率偏低，悬架较软，注意动挠度':n0>2.0?'频率偏高，建议增大 V₀ 或降低 p₀':'频率在合理范围内';
+  wb.className='msg ok show';wb.textContent='✓ 计算完成 — '+hint;
+  updateChart();
+  updateChart2();
+}
+
+function simF(farr,p0,pa,V0,A,k,Vadd){
+  const Vt=V0+Vadd;
+  return farr.map(f=>{const V=Vt-A*f;if(V<=0)return null;return(p0*Math.pow(Vt/V,k)-pa)*A;});
+}
+
+// ── 完整模型 F-x 特性曲线（A 和 V 均随位移变化）──
+function updateChart2(){
+  var p0=parseFloat(document.getElementById('p0').value);
+  var pa=parseFloat(document.getElementById('pa').value);
+  var gam=getK();
+  if(isNaN(p0)||isNaN(pa)||p0<=pa)return;
+
+  var V0   =+document.getElementById('sl2-V0').value;
+  var A0   =+document.getElementById('sl2-A0').value;
+  var alpha=+document.getElementById('sl2-alpha').value;
+  var beta =+document.getElementById('sl2-beta').value;
+  var xmax =+document.getElementById('sl2-xmax').value;
+
+  // 更新显示标签
+
+
+  var N=300, xs=[];
+  for(var i=0;i<=N;i++) xs.push(-xmax+2*xmax*i/N);
+
+  // 完整模型：A = A0+β·x，V = V0−α·x
+  function fullF(x){
+    var V=V0-alpha*x, A=A0+beta*x;
+    if(V<=0||A<=0)return null;
+    return ((p0+pa)*Math.pow(V0/V,gam)-pa)*A; // N
+  }
+
+  // 简化模型：A 恒定 = A0，V = V0−A0·x
+  function simpleF(x){
+    var V=V0-A0*x;
+    if(V<=0)return null;
+    return ((p0+pa)*Math.pow(V0/V,gam)-pa)*A0;
+  }
+
+  var Ffull  = xs.map(fullF);
+  var Fsimple= xs.map(simpleF);
+  var FfKN   = Ffull.map(function(v){return v===null?null:v/1000;});
+  var FsKN   = Fsimple.map(function(v){return v===null?null:v/1000;});
+
+  // 静载点切线刚度（数值微分，单位 N/mm）
+  var dx=0.5;
+  var Fp=fullF(dx), Fm2=fullF(-dx);
+  var k0=(Fp!==null&&Fm2!==null)?(Fp-Fm2)/(2*dx):null;
+
+  // ── Canvas ──
+  var canvas=document.getElementById('simChart2');
+  var wrap  =document.getElementById('chart2-wrap');
+  var W=wrap.clientWidth||800, H=420;
+  canvas.width=W; canvas.height=H; canvas.style.display='block';
+  var ctx=canvas.getContext('2d');
+
+  // Y 范围（裁掉 1% 极端值）
+  var allY=FfKN.concat(FsKN).filter(function(v){return v!==null&&isFinite(v);}).sort(function(a,b){return a-b;});
+  if(allY.length<4)return;
+  var clip=Math.max(1,Math.floor(allY.length*0.01));
+  var yMin=allY[clip], yMax=allY[allY.length-1-clip];
+  if(yMin===yMax){yMin-=1;yMax+=1;}
+  var yPad=(yMax-yMin)*0.09; yMin-=yPad; yMax+=yPad;
+
+  var PL=78,PR=22,PT=52,PB=56;
+  var pw=W-PL-PR, ph=H-PT-PB;
+  function tx(x){return PL+(x+xmax)/(2*xmax)*pw;}
+  function ty(F){return H-PB-(F-yMin)/(yMax-yMin)*ph;}
+
+  ctx.fillStyle='#18181a'; ctx.fillRect(0,0,W,H);
+
+  // 网格
+  var xStep=niceTick(xmax*0.6);
+  var yStep=niceTick((yMax-yMin)*0.28);
+  ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.setLineDash([]);
+  for(var xv=-Math.ceil(xmax/xStep)*xStep;xv<=xmax+xStep*0.01;xv+=xStep){
+    if(Math.abs(xv)>xmax+0.1)continue;
+    ctx.beginPath();ctx.moveTo(tx(xv),PT);ctx.lineTo(tx(xv),H-PB);ctx.stroke();
+  }
+  var yS0=Math.floor(yMin/yStep)*yStep;
+  for(var yv=yS0;yv<=yMax+yStep*0.01;yv+=yStep){
+    var yp=ty(yv); if(yp<PT-2||yp>H-PB+2)continue;
+    ctx.beginPath();ctx.moveTo(PL,yp);ctx.lineTo(W-PR,yp);ctx.stroke();
+  }
+
+  // 零轴虚线
+  ctx.strokeStyle='rgba(255,255,255,0.20)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+  if(0>=yMin&&0<=yMax){ctx.beginPath();ctx.moveTo(PL,ty(0));ctx.lineTo(W-PR,ty(0));ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(tx(0),PT);ctx.lineTo(tx(0),H-PB);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 绘制曲线
+  function drawC(vals,color,lw,dash){
+    ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.setLineDash(dash||[]);
+    ctx.beginPath(); var pen=false;
+    for(var i=0;i<xs.length;i++){
+      var v=vals[i];
+      if(v===null||!isFinite(v)||v<yMin-Math.abs(yMax-yMin)||v>yMax+Math.abs(yMax-yMin)){pen=false;continue;}
+      var x=tx(xs[i]),y=ty(v);
+      if(!pen){ctx.moveTo(x,y);pen=true;}else{ctx.lineTo(x,y);}
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  drawC(FsKN,   '#60cc70', 2,   [8,5]);   // 简化模型（绿虚线）
+  drawC(FfKN,   '#5ba3e8', 3.5, null);    // 完整模型（蓝实线）
+
+  // 静载工作点金色圆点 + 投影虚线
+  var F0=fullF(0);
+  if(F0!==null){
+    var x0p=tx(0), y0p=ty(F0/1000);
+    ctx.setLineDash([4,3]); ctx.strokeStyle='rgba(245,192,96,0.35)'; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x0p,y0p);ctx.lineTo(x0p,H-PB);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x0p,y0p);ctx.lineTo(PL,y0p);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#f5c060';
+    ctx.beginPath();ctx.arc(x0p,y0p,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#18181a';
+    ctx.beginPath();ctx.arc(x0p,y0p,4,0,Math.PI*2);ctx.fill();
+
+    // 切线刚度可视化：在 x=0 处画切线段
+    if(k0!==null){
+      var span=xmax*0.3;
+      var Flo=(F0-k0*span)/1000, Fhi=(F0+k0*span)/1000;
+      ctx.strokeStyle='rgba(245,192,96,0.55)'; ctx.lineWidth=1.5; ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(tx(-span),ty(Flo));ctx.lineTo(tx(span),ty(Fhi));ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // 坐标轴
+  ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,H-PB);ctx.lineTo(W-PR,H-PB);ctx.stroke();
+  ctx.fillStyle='#4a5d72';
+  ctx.beginPath();ctx.moveTo(PL-5,PT+4);ctx.lineTo(PL+5,PT+4);ctx.lineTo(PL,PT-8);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(W-PR-2,H-PB-5);ctx.lineTo(W-PR-2,H-PB+5);ctx.lineTo(W-PR+9,H-PB);ctx.closePath();ctx.fill();
+
+  // 刻度值
+  ctx.fillStyle='#7a7870'; ctx.font='13px sans-serif'; ctx.textAlign='center';
+  for(var xv=-Math.ceil(xmax/xStep)*xStep;xv<=xmax+xStep*0.01;xv+=xStep){
+    if(Math.abs(xv)>xmax+0.1)continue;
+    ctx.fillText(xv.toFixed(0), tx(xv), H-PB+17);
+  }
+  ctx.textAlign='right';
+  for(var yv=yS0;yv<=yMax+yStep*0.01;yv+=yStep){
+    var yp=ty(yv); if(yp<PT-2||yp>H-PB+2)continue;
+    ctx.fillText(yv.toFixed(Math.abs(yv)<1?2:1), PL-8, yp+5);
+  }
+
+  // 轴标签
+  ctx.fillStyle='#b8b5ac'; ctx.font='14px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('弹簧变形量 x（mm）  压缩 →  ← 伸张', PL+pw/2, H-8);
+  ctx.save();ctx.translate(16,PT+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('弹簧力 F（kN）',0,0);ctx.restore();
+
+  // 图例
+  var lg=[{c:'#5ba3e8',d:null,t:'完整模型（A = A₀+βx，V = V₀−αx）'},{c:'#60cc70',d:[8,5],t:'简化模型（A = A₀ 恒定）'},{c:'#f5c060',d:[5,3],t:'静载工作点切线刚度'}];
+  var lx=PL, ly=30; ctx.font='13px sans-serif';
+  lg.forEach(function(item){
+    ctx.strokeStyle=item.c; ctx.lineWidth=2.5; ctx.setLineDash(item.d||[]);
+    ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+26,ly);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#b8b5ac'; ctx.textAlign='left'; ctx.fillText(item.t,lx+30,ly+5);
+    lx+=ctx.measureText(item.t).width+55;
+    if(lx>W-220){lx=PL;ly+=20;}
+  });
+
+  // 信息文字
+  var info=document.getElementById('chart2-info');
+  if(info&&F0!==null){
+    var Fpos=fullF(xmax*0.85), Fneg=fullF(-xmax*0.85);
+    var kPos=null,kNeg=null;
+    var Fp2=fullF(xmax*0.85+dx), Fp1=fullF(xmax*0.85-dx);
+    if(Fp2&&Fp1) kPos=(Fp2-Fp1)/(2*dx);
+    var Fn2=fullF(-xmax*0.85+dx), Fn1=fullF(-xmax*0.85-dx);
+    if(Fn2&&Fn1) kNeg=(Fn2-Fn1)/(2*dx);
+    info.innerHTML=
+      '<span style="color:#f5c060">●</span> 静载点（x=0）: F₀ = <b style="color:#f5c060">'+(F0/1000).toFixed(2)+'</b> kN，'
+      +'切线刚度 k₀ = <b style="color:#f5c060">'+(k0!==null?k0.toFixed(1):'—')+'</b> N/mm'
+      +(Fpos?'　<span style="color:#5ba3e8">●</span> 压缩端（x='+(xmax*0.85).toFixed(0)+'mm）: F = <b style="color:#5ba3e8">'+(Fpos/1000).toFixed(2)+'</b> kN，k = <b>'+(kPos?kPos.toFixed(1):'—')+'</b> N/mm':'')
+      +(Fneg?'　<span style="color:#60cc70">●</span> 伸张端（x=−'+(xmax*0.85).toFixed(0)+'mm）: F = <b style="color:#60cc70">'+(Fneg/1000).toFixed(2)+'</b> kN，k = <b>'+(kNeg?kNeg.toFixed(1):'—')+'</b> N/mm':'');
+  }
+}
+
+// ── 坐标轴刻度辅助 ──
+function niceTick(v){
+  if(v<=0)return 1;
+  var e=Math.pow(10,Math.floor(Math.log10(v))),f=v/e;
+  return f<1.5?e:f<3?2*e:f<7?5*e:10*e;
+}
+
+// ── 纯 Canvas 绘制 F-f 曲线（无外部依赖）──
+function updateChart(){
+  var p=getP();
+  var p0=p.p0,pa=p.pa,V0=p.V0,D=p.D,k=p.k;
+  if(isNaN(p0)||isNaN(pa)||isNaN(V0)||isNaN(D)||p0<=pa||V0<=0||D<=0)return;
+
+  var A=Math.PI*D*D/4;
+  var fmax =+document.getElementById('sl-fmax').value;
+  var alpha=+document.getElementById('sl-alpha').value;
+  var clin =+document.getElementById('sl-clin').value;
+  var F1pct=+document.getElementById('sl-F1pct').value/100;
+
+
+
+  // 生成行程数组
+  var N=300,fa=[];
+  for(var i=0;i<=N;i++) fa.push(-fmax+2*fmax*i/N);
+
+  // 计算各曲线（N/mm→kN）
+  function curve(kk,Vadd){
+    var Vt=V0+(Vadd||0);
+    return fa.map(function(f){var V=Vt-A*f;return V<=0?null:(p0*Math.pow(Vt/V,kk)-pa)*A/1000;});
+  }
+  var Fm=curve(k,0), Fi=curve(1.0,0);
+  var Faux=alpha>0?curve(k,alpha*V0):null;
+
+  // 静载力偏置
+  var validFm=Fm.filter(function(v){return v!==null;});
+  var Fmax_abs=Math.max.apply(null,validFm.map(Math.abs))||1;
+  var F1=F1pct*Fmax_abs;
+  var Flin=fa.map(function(f){return (F1+clin*f)/1000;});
+
+  // ── Canvas 尺寸 ──
+  var canvas=document.getElementById('simChart');
+  var wrap  =document.getElementById('chart-wrap');
+  var W=wrap.clientWidth||840, H=420;
+  canvas.width=W; canvas.height=H;
+  canvas.style.display='block';
+  var ctx=canvas.getContext('2d');
+
+  // ── Y 范围（去掉上下 1.5% 极端值以防近奇点畸变）──
+  var allY=Fm.concat(Fi).concat(Flin).concat(Faux||[])
+            .filter(function(v){return v!==null&&isFinite(v);})
+            .sort(function(a,b){return a-b;});
+  if(allY.length<4){return;}
+  var clip=Math.max(1,Math.floor(allY.length*0.015));
+  var yMin=allY[clip], yMax=allY[allY.length-1-clip];
+  if(yMin===yMax){yMin-=1;yMax+=1;}
+  var yPad=(yMax-yMin)*0.09;
+  yMin-=yPad; yMax+=yPad;
+
+  // 画布边距
+  var PL=72,PR=22,PT=52,PB=54;
+  var pw=W-PL-PR, ph=H-PT-PB;
+
+  function tx(f){return PL+(f+fmax)/(2*fmax)*pw;}
+  function ty(F){return H-PB-(F-yMin)/(yMax-yMin)*ph;}
+
+  // ── 背景 ──
+  ctx.fillStyle='#18181a'; ctx.fillRect(0,0,W,H);
+
+  // ── 网格 ──
+  var xStep=niceTick(fmax*0.6);
+  var yStep=niceTick((yMax-yMin)*0.28);
+
+  ctx.strokeStyle='rgba(255,255,255,0.07)'; ctx.lineWidth=1; ctx.setLineDash([]);
+  for(var xv=-Math.ceil(fmax/xStep)*xStep; xv<=fmax+xStep*0.01; xv+=xStep){
+    if(Math.abs(xv)>fmax+0.1) continue;
+    ctx.beginPath();ctx.moveTo(tx(xv),PT);ctx.lineTo(tx(xv),H-PB);ctx.stroke();
+  }
+  var yS0=Math.floor(yMin/yStep)*yStep;
+  for(var yv=yS0; yv<=yMax+yStep*0.01; yv+=yStep){
+    var yp=ty(yv); if(yp<PT-2||yp>H-PB+2) continue;
+    ctx.beginPath();ctx.moveTo(PL,yp);ctx.lineTo(W-PR,yp);ctx.stroke();
+  }
+
+  // ── 零轴（明显一些）──
+  ctx.strokeStyle='rgba(255,255,255,0.20)'; ctx.lineWidth=1; ctx.setLineDash([4,3]);
+  if(0>=yMin&&0<=yMax){ctx.beginPath();ctx.moveTo(PL,ty(0));ctx.lineTo(W-PR,ty(0));ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(tx(0),PT);ctx.lineTo(tx(0),H-PB);ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── 绘制曲线 ──
+  function drawCurve(vals,color,lw,dash){
+    ctx.save();
+    ctx.strokeStyle=color; ctx.lineWidth=lw;
+    ctx.setLineDash(dash||[]);
+    ctx.beginPath();
+    var pen=false;
+    for(var i=0;i<fa.length;i++){
+      var v=vals[i];
+      // 跳过空值或超出 Y 范围太多的点（防奇点）
+      if(v===null||!isFinite(v)||v<yMin-Math.abs(yMax-yMin)||v>yMax+Math.abs(yMax-yMin)){
+        pen=false; continue;
+      }
+      var x=tx(fa[i]), y=ty(v);
+      if(!pen){ctx.moveTo(x,y);pen=true;}else{ctx.lineTo(x,y);}
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 绘制顺序：底层→顶层
+  drawCurve(Flin,  '#e05c5c', 2,   [12,6]);
+  drawCurve(Fi,    '#60cc70', 2.5, [8,5]);
+  if(Faux) drawCurve(Faux,'#f5c060',2.5,[5,4]);
+  drawCurve(Fm,    '#5ba3e8', 3.5, null);
+
+  // ── 坐标轴框线 ──
+  ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,H-PB);ctx.lineTo(W-PR,H-PB);ctx.stroke();
+
+  // ── 刻度标注 ──
+  ctx.fillStyle='#7a7870'; ctx.textAlign='center';
+  ctx.font='13px -apple-system,BlinkMacSystemFont,sans-serif';
+  for(var xv=-Math.ceil(fmax/xStep)*xStep; xv<=fmax+xStep*0.01; xv+=xStep){
+    if(Math.abs(xv)>fmax+0.1) continue;
+    ctx.fillText(xv.toFixed(0), tx(xv), H-PB+17);
+  }
+  ctx.textAlign='right';
+  for(var yv=yS0; yv<=yMax+yStep*0.01; yv+=yStep){
+    var yp=ty(yv); if(yp<PT-2||yp>H-PB+2) continue;
+    ctx.fillText(yv.toFixed(Math.abs(yv)<0.1?2:1), PL-8, yp+5);
+  }
+
+  // ── 轴标签 ──
+  ctx.fillStyle='#b8b5ac';
+  ctx.font='14px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('行程 f（mm）  压缩 →  ← 伸张', PL+pw/2, H-7);
+  ctx.save(); ctx.translate(14,PT+ph/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('弹簧力 F（kN）',0,0); ctx.restore();
+
+  // ── 图例 ──
+  var lgItems=[
+    {c:'#5ba3e8', d:null,   t:'空气弹簧（k='+k+'）'},
+    {c:'#60cc70', d:[8,5],  t:'空气弹簧（k=1.0 等温）'},
+    {c:'#e05c5c', d:[12,6], t:'等效线性弹簧'},
+  ];
+  if(alpha>0) lgItems.push({c:'#f5c060',d:[5,4],t:'加辅助气室（α='+alpha+'）'});
+
+  ctx.font='13px -apple-system,BlinkMacSystemFont,sans-serif';
+  var lx=PL, ly=28;
+  lgItems.forEach(function(item){
+    ctx.strokeStyle=item.c; ctx.lineWidth=2.5;
+    ctx.setLineDash(item.d||[]);
+    ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx+26,ly);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#b8b5ac'; ctx.textAlign='left';
+    ctx.fillText(item.t, lx+30, ly+5);
+    lx+=ctx.measureText(item.t).width+60;
+    if(lx>W-200){lx=PL;ly+=20;}
+  });
+}
+
+document.querySelectorAll('input[type=number],input[type=radio]').forEach(el=>el.addEventListener('input',calc));
+document.querySelectorAll('[id^="sl2-"]').forEach(function(el){el.addEventListener('input',updateChart2);});
+document.querySelectorAll('[id^="sl-"]').forEach(function(el){el.addEventListener('input',updateChart);});
+window.addEventListener('resize',function(){
+  var ready=document.getElementById('r-c0').textContent!=='—';
+  if(ready){updateChart();updateChart2();}
+});
+calc();
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+if (e.key === 'F12' || 
+(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+(e.ctrlKey && e.key === 'U') ||
+(e.ctrlKey && e.key === 'S')) {
+e.preventDefault();
+return false;
+}
+});
+
+</script>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || 
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) ||
+        (e.ctrlKey && e.key === 'U') ||
+        (e.ctrlKey && e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+  });
+</script>
+
+</body>
+</html>
